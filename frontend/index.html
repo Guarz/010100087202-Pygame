@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>/* áp theme đã lưu trước khi vẽ trang để không bị chớp màu */try { document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("pq_theme") || "dark"); } catch (e) {}</script>
+  <title>Python Quest — Học Python qua phiêu lưu</title>
+  <link rel="icon" href="/game/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar sticky-top pq-navbar">
+    <div class="container-fluid px-3 px-lg-4">
+      <a class="navbar-brand" href="/">Python<span>Quest</span></a>
+      <div class="d-flex align-items-center gap-2">
+        <a href="/leaderboard.html"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Bảng xếp hạng</a>
+        <button type="button" class="btn small ghost theme-toggle"></button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4 py-lg-5">
+    <div class="row align-items-center g-4 g-lg-5 hero">
+      <section class="col-lg-7">
+        <h1>Học Python bằng cách <em>phiêu lưu</em>.</h1>
+        <p class="lead">Mỗi màn chơi là một nhiệm vụ lập trình: mở cửa bằng điều kiện, điều khiển robot bằng vòng lặp,
+          xử lý kho báu bằng list/dict và hạ Rồng Bug bằng hàm.</p>
+        <div class="row row-cols-1 row-cols-sm-2 g-3 mt-2">
+          <div class="col"><div class="feature"><b><i class="fa-solid fa-flask" aria-hidden="true"></i> Code judge thật</b><span class="muted">Chấm trên server với test hiện và test ẩn.</span></div></div>
+          <div class="col"><div class="feature"><b><i class="fa-solid fa-comments" aria-hidden="true"></i> Lỗi dễ hiểu</b><span class="muted">Phân biệt lỗi cú pháp, lỗi chạy và lỗi tư duy.</span></div></div>
+          <div class="col"><div class="feature"><b><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Gợi ý từng bước</b><span class="muted">Mở dần 3 gợi ý cho mỗi màn.</span></div></div>
+          <div class="col"><div class="feature"><b><i class="fa-solid fa-suitcase" aria-hidden="true"></i> Vật phẩm & BXH</b><span class="muted">Sưu tầm 12 vật phẩm, leo bảng xếp hạng.</span></div></div>
+        </div>
+      </section>
+
+      <section class="col-lg-5">
+        <div class="card" id="auth-card">
+          <div class="tabs">
+            <button class="active" data-tab="login">Đăng nhập</button>
+            <button data-tab="register">Đăng ký</button>
+          </div>
+          <div id="dev-note" class="alert ok hidden">Chế độ phát triển (local): chỉ cần nhập email, không cần mật khẩu.</div>
+          <div id="msg"></div>
+          <form id="auth-form" autocomplete="on">
+            <div class="mb-3 hidden" id="name-field">
+              <label class="form-label" for="name">Tên hiển thị</label>
+              <input class="form-control" id="name" maxlength="24" placeholder="VD: Pythonista">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control" id="email" type="email" required autocomplete="email" placeholder="ban@vidu.com">
+            </div>
+            <div class="mb-3" id="pw-field">
+              <label class="form-label" for="password">Mật khẩu</label>
+              <input class="form-control" id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Ít nhất 6 ký tự">
+            </div>
+            <button class="btn primary w-100" id="submit">Vào game <i class="fa-solid fa-play" aria-hidden="true"></i></button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let mode = "login";
+    const $ = (id) => document.getElementById(id);
+    const next = new URLSearchParams(location.search).get("next");
+    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/map.html";
+
+    function showMsg(text, kind = "err") { $("msg").innerHTML = text ? `<div class="alert ${kind}">${esc(text)}</div>` : ""; }
+
+    document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+      mode = b.dataset.tab;
+      document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
+      $("name-field").classList.toggle("hidden", mode !== "register" || PQ.config.auth_mode === "dev");
+      $("password").autocomplete = mode === "register" ? "new-password" : "current-password";
+      showMsg("");
+    });
+
+    (async () => {
+      await PQ.init();
+      if (PQ.config.auth_mode === "dev") {
+        $("dev-note").classList.remove("hidden");
+        $("pw-field").classList.add("hidden");
+      } else {
+        $("password").required = true;
+      }
+      if (await PQ.token()) location.href = target;
+    })();
+
+    $("auth-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = $("submit");
+      btn.disabled = true;
+      showMsg("");
+      try {
+        if (mode === "login") {
+          await PQ.login($("email").value, $("password").value);
+          location.href = target;
+        } else {
+          const res = await PQ.register($("email").value, $("password").value, $("name").value.trim());
+          if (res && res.needsConfirm) showMsg("Đăng ký thành công! Hãy mở email và bấm link xác nhận, sau đó đăng nhập.", "ok");
+          else location.href = target;
+        }
+      } catch (err) {
+        showMsg(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>

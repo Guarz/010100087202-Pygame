@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>/* áp theme đã lưu trước khi vẽ trang để không bị chớp màu */try { document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("pq_theme") || "dark"); } catch (e) {}</script>
+  <title>Bản đồ — Python Quest</title>
+  <link rel="icon" href="/game/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="container py-4 d-grid gap-4">
+    <section class="card">
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <div class="avatar"><i class="fa-solid fa-robot" aria-hidden="true"></i></div>
+        <div class="flex-grow-1" style="min-width:200px">
+          <h2 id="name" class="mb-0 text-break"></h2>
+          <div class="muted text-break" id="email"></div>
+          <div class="progress mt-2" role="progressbar" aria-label="Tiến độ hoàn thành">
+            <div class="progress-bar" id="bar" style="width:0"></div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="s-score">0</b><span>Điểm</span></div>
+          <div class="stat"><b id="s-done">0</b><span>Màn đã qua</span></div>
+          <div class="stat"><b id="s-rank">—</b><span>Hạng</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <h2 class="mb-0 me-auto">Bản đồ phiêu lưu</h2>
+        <a class="btn primary" id="continue" href="#">Chơi tiếp <i class="fa-solid fa-play" aria-hidden="true"></i></a>
+      </div>
+      <div class="row row-cols-1 row-cols-lg-2 g-3" id="chapters"></div>
+    </section>
+
+    <section class="card">
+      <h3><i class="fa-solid fa-suitcase" aria-hidden="true"></i> Túi đồ</h3>
+      <p class="muted">Hoàn thành mỗi màn để nhận một vật phẩm.</p>
+      <div class="row row-cols-4 row-cols-sm-6 g-2" id="inventory"></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (async () => {
+      const me = await PQ.requireUser("map");
+      const $ = (id) => document.getElementById(id);
+      $("name").textContent = me.display_name;
+      $("email").textContent = me.email;
+      $("s-score").textContent = me.score;
+      $("s-done").textContent = `${me.completed}/${me.total_levels}`;
+      $("s-rank").textContent = me.rank ? "#" + me.rank : "—";
+      $("bar").style.width = (100 * me.completed / me.total_levels) + "%";
+
+      const [{ chapters, levels }, items] = await Promise.all([PQ.api("/api/levels"), PQ.api("/api/inventory")]);
+      const next = levels.find((l) => l.unlocked && !l.completed) || levels[levels.length - 1];
+      $("continue").href = "/play.html?id=" + next.id;
+      $("continue").innerHTML = (levels.every((l) => l.completed) ? "Chơi lại " : `Chơi tiếp: ${esc(next.title)} `) + icon("play");
+
+      $("chapters").innerHTML = chapters.map((ch) => {
+        const ls = levels.filter((l) => l.chapter === ch.id);
+        const done = ls.filter((l) => l.completed).length;
+        return `<div class="col"><div class="card chapter h-100">
+          <h3><span>Chương ${ch.id}: ${esc(ch.title)}</span><span class="muted" style="font-size:13px">${done}/${ls.length}</span></h3>
+          <div class="topic">${esc(ch.topic)}</div>
+          <div class="levels">${ls.map(levelRow).join("")}</div>
+        </div></div>`;
+      }).join("");
+
+      function levelRow(l) {
+        const kindIcon = icon(l.kind === "robot" ? "robot" : { boss: "dragon", door: "door-closed", chest: "box-open" }[l.scene] || "scroll");
+        const cls = `level ${l.completed ? "done" : ""} ${l.unlocked ? "" : "locked"}`;
+        const inner = `<div class="num">${l.completed ? icon("check") : l.unlocked ? l.id : icon("lock")}</div>
+          <div class="meta"><div><b>${esc(l.title)}</b></div>
+            <small>${kindIcon} ${l.kind === "robot" ? "Điều khiển robot" : "Viết hàm"}${l.attempts ? ` · ${l.attempts} lần nộp` : ""}</small></div>
+          ${l.best_score ? `<div class="score">${l.best_score}</div>` : ""}`;
+        return l.unlocked ? `<a class="${cls}" href="/play.html?id=${l.id}">${inner}</a>`
+                          : `<div class="${cls}" title="Hoàn thành màn trước để mở khóa">${inner}</div>`;
+      }
+
+      const owned = new Map(items.map((i) => [i.id, i]));
+      $("inventory").innerHTML = levels.map((l) => {
+        const it = owned.get(l.reward.id);
+        return `<div class="col">${it ? `<div class="slot owned" title="${esc(it.name)}">${icon(it.icon)}</div>`
+                                      : `<div class="slot empty" title="Hoàn thành màn ${l.id} để nhận">${icon("question")}</div>`}</div>`;
+      }).join("");
+    })();
+  </script>
+</body>
+</html>

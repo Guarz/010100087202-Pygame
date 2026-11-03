@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>/* áp theme đã lưu trước khi vẽ trang để không bị chớp màu */try { document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("pq_theme") || "dark"); } catch (e) {}</script>
+  <title>Màn chơi — Python Quest</title>
+  <link rel="icon" href="/game/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="container-fluid px-3 px-lg-4 py-3" style="max-width:1400px">
+   <div class="row g-3">
+    <aside class="col-lg-4 col-xxl-3"><div class="card mission h-100" id="mission">
+      <div class="hrow mb-2">
+        <a href="/map.html" class="muted"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Bản đồ</a>
+        <span class="spacer"></span>
+        <span class="chip" id="chapter-chip"></span>
+      </div>
+      <h2 id="title">Đang tải...</h2>
+      <p class="story" id="story"></p>
+      <div class="section-title"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Nhiệm vụ</div>
+      <div class="task" id="task"></div>
+      <div id="extra"></div>
+      <div class="section-title"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Gợi ý</div>
+      <div id="hints"></div>
+      <button class="btn small" id="hint-btn">Mở gợi ý</button>
+      <div class="section-title"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i> Tiến độ</div>
+      <div class="muted" id="progress"></div>
+    </div></aside>
+
+    <section class="col-lg-8 col-xxl-9 d-grid gap-3 align-content-start">
+      <div class="game-frame">
+        <iframe id="game" src="/game/index.html" title="Màn hình game" allow="autoplay"></iframe>
+        <div class="game-loading" id="game-loading"><span><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>&nbsp; Đang tải game Python (WebAssembly)...</span></div>
+      </div>
+
+      <div class="card editor-card">
+        <div class="toolbar">
+          <button class="btn" id="run-btn"><i class="fa-solid fa-play" aria-hidden="true"></i> Chạy thử</button>
+          <button class="btn go" id="submit-btn"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Nộp bài</button>
+          <span class="kbd d-none d-md-inline">Ctrl+Enter: chạy thử · Ctrl+Shift+Enter: nộp</span>
+          <span class="spacer"></span>
+          <button class="btn small ghost" id="reset-btn" title="Khôi phục code mẫu ban đầu" aria-label="Đặt lại code mẫu"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span class="d-none d-sm-inline">Đặt lại</span></button>
+        </div>
+        <textarea id="code"></textarea>
+      </div>
+
+      <div class="card result" id="result">
+        <div class="muted">Bấm <b>Chạy thử</b> để chạy với test hiện, <b>Nộp bài</b> để chấm với cả test ẩn và tính điểm.</div>
+      </div>
+    </section>
+   </div>
+  </main>
+
+  <div class="modal fade" id="modal" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center p-4" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const levelId = Number(new URLSearchParams(location.search).get("id")) || 1;
+    let draftKey, level, editor, errorLine = null, busy = false, gameSeq = Date.now();
+
+    // Định dạng giá trị theo cú pháp Python để hiển thị ví dụ.
+    function py(v) {
+      if (v === null) return "None";
+      if (v === true) return "True";
+      if (v === false) return "False";
+      if (typeof v === "string") return JSON.stringify(v);
+      if (Array.isArray(v)) return "[" + v.map(py).join(", ") + "]";
+      if (typeof v === "object") return "{" + Object.entries(v).map(([k, x]) => JSON.stringify(k) + ": " + py(x)).join(", ") + "}";
+      return String(v);
+    }
+
+    // ---- cầu nối với game pygbag (cùng origin, qua localStorage) ----
+    function sendToGame(cmd) {
+      gameSeq += 1;
+      localStorage.setItem("pq_cmd", JSON.stringify({ ...cmd, seq: gameSeq }));
+      return gameSeq;
+    }
+    function waitForGame(seq, ms) {
+      return new Promise((resolve) => {
+        const timer = setTimeout(done, ms);
+        function done() { clearTimeout(timer); window.removeEventListener("storage", onStorage); resolve(); }
+        function onStorage(e) {
+          if (e.key !== "pq_status" || !e.newValue) return;
+          const st = JSON.parse(e.newValue);
+          if (st.state === "done" && st.seq === seq) done();
+        }
+        window.addEventListener("storage", onStorage);
+      });
+    }
+    $("game").addEventListener("load", () => {
+      try { $("game").contentDocument.body.style.background = "#141826"; } catch (_) {}
+    });
+    localStorage.removeItem("pq_status");
+    window.addEventListener("storage", (e) => {
+      if (e.key === "pq_status" && e.newValue) $("game-loading").style.opacity = 0;
+    });
+    setTimeout(() => { $("game-loading").style.opacity = 0; }, 20000);
+
+    function previewLevel() {
+      if (level.kind === "robot") sendToGame({ type: "robot", map: level.preview.map, dir: level.preview.dir, trace: [], passed: null });
+      else sendToGame({ type: "scene", scene: level.scene, results: null });
+    }
+
+    // ---- hiển thị nhiệm vụ ----
+    function renderMission() {
+      document.title = level.title + " — Python Quest";
+      $("chapter-chip").textContent = `Chương ${level.chapter} · Màn ${level.id}`;
+      $("title").textContent = level.title;
+      $("story").textContent = level.story;
+      $("task").textContent = level.task;
+      let extra = "";
+      if (level.kind === "robot") {
+        extra = `<div class="section-title">${icon("robot")} Lệnh của robot</div><div class="api-list">${level.api.map(([c, d]) =>
+          `<div><code>${esc(c)}</code><span class="muted">${esc(d)}</span></div>`).join("")}</div>`;
+      } else {
+        extra = `<div class="section-title">${icon("flask")} Ví dụ (test hiện)</div>${level.examples.map((ex) =>
+          `<div class="example">${esc(level.func)}(${esc(ex.args.map(py).join(", "))}) <span class="arrow">→</span> ${esc(py(ex.expected))}</div>`).join("")}`;
+      }
+      extra += `<p class="muted" style="font-size:13px">Ngoài ra còn <b>${level.hidden_count}</b> test ẩn khi nộp bài.</p>`;
+      $("extra").innerHTML = extra;
+      renderHints();
+      renderProgress();
+    }
+
+    function renderHints() {
+      $("hints").innerHTML = level.hints.map((h, i) => `<div class="hint"><b>Gợi ý ${i + 1}:</b> ${esc(h)}</div>`).join("")
+        || '<p class="muted" style="margin-top:0">Chưa mở gợi ý nào. Mỗi gợi ý trừ 10 điểm của màn này.</p>';
+      const left = level.hint_count - level.hints.length;
+      $("hint-btn").innerHTML = left ? `${icon("lightbulb")} Mở gợi ý ${level.hints.length + 1}/${level.hint_count} (−10 điểm)` : "Đã mở hết gợi ý";
+      $("hint-btn").disabled = !left;
+    }
+
+    function renderProgress() {
+      const p = level.progress;
+      $("progress").innerHTML = `${p.completed ? `<span style="color:var(--green)">${icon("circle-check")} Đã hoàn thành</span>` : `${icon("hourglass-half")} Chưa hoàn thành`} · Điểm cao nhất: <b style="color:var(--gold)">${p.best_score}</b>
+        · Số lần nộp: ${p.attempts}`;
+    }
+
+    $("hint-btn").onclick = async () => {
+      if (!confirm("Mở gợi ý tiếp theo? Điểm tối đa của màn này sẽ giảm 10.")) return;
+      try {
+        const res = await PQ.api(`/api/levels/${levelId}/hint`, { method: "POST" });
+        level.hints = res.hints;
+        level.progress.hints_used = res.hints_used;
+        renderHints();
+      } catch (err) { toast(err.message); }
+    };
+
+    // ---- chạy & nộp ----
+    function setBusy(on, label) {
+      busy = on;
+      $("run-btn").disabled = $("submit-btn").disabled = on;
+      if (on) $("result").innerHTML = `<div class="muted">${icon("spinner", "fa-spin")} ${label}</div>`;
+    }
+
+    function markErrorLine(line) {
+      if (errorLine !== null) editor.removeLineClass(errorLine, "background", "cm-error-line");
+      errorLine = null;
+      if (line && line <= editor.lineCount()) {
+        errorLine = line - 1;
+        editor.addLineClass(errorLine, "background", "cm-error-line");
+        editor.scrollIntoView({ line: errorLine, ch: 0 }, 80);
+      }
+    }
+
+    const ERROR_LABEL = { syntax: "Lỗi cú pháp", forbidden: "Không được phép", runtime: "Lỗi khi chạy",
+                          timeout: "Quá thời gian", logic: "Lỗi tư duy", ok: "Chính xác" };
+
+    function renderResult(res, submitted) {
+      const tests = res.tests.map((t) => `
+        <div class="test ${t.passed ? "pass" : "fail"}">
+          <div class="hrow"><b>${t.passed ? icon("circle-check", "ok-icon") : icon("circle-xmark", "fail-icon")} ${esc(t.name)}</b><span class="muted">${esc(t.message)}</span></div>
+          ${t.input !== undefined ? `<div class="io">Đầu vào: <b>${esc(t.input)}</b> · Kỳ vọng: <b>${esc(t.expected)}</b>
+            · Nhận được: <b>${esc(t.got ?? "—")}</b></div>` : ""}
+        </div>`).join("");
+      const scoreLine = submitted ? `<div class="hrow" style="margin-bottom:10px">
+          <span class="chip gold">Điểm lần này: ${res.score}</span><span class="chip">Điểm cao nhất: ${res.best_score}</span>
+          ${res.hints_used ? `<span class="chip">Đã dùng ${res.hints_used} gợi ý (−${res.hints_used * 10})</span>` : ""}</div>` : "";
+      $("result").innerHTML = `
+        <div class="hrow" style="margin-bottom:10px">
+          <h3 style="margin:0">${submitted ? "Kết quả nộp bài" : "Kết quả chạy thử"}</h3>
+          <span class="badge ${res.error_type}">${ERROR_LABEL[res.error_type] || res.error_type}</span>
+          <span class="spacer"></span><b>${res.passed}/${res.total} test</b>
+        </div>
+        ${scoreLine}
+        <div class="summary ${res.status}">${esc(res.summary)}</div>
+        <div class="tests">${tests}</div>
+        ${res.output ? `<div class="section-title">${icon("terminal")} Output (print)</div><div class="console">${esc(res.output)}</div>` : ""}`;
+    }
+
+    async function run(submit) {
+      if (busy) return;
+      const code = editor.getValue();
+      setBusy(true, submit ? "Đang chấm với toàn bộ test (kể cả test ẩn)..." : "Đang chạy thử với test hiện...");
+      try {
+        const res = await PQ.api(`/api/levels/${levelId}/${submit ? "submit" : "run"}`, { method: "POST", body: { code } });
+        renderResult(res, submit);
+        markErrorLine(res.line);
+        if (res.animation) await waitForGame(sendToGame(res.animation), 9000);
+        if (submit && res.status === "passed") showVictory(res);
+        else $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (submit) {
+          level.progress.best_score = res.best_score;
+          level.progress.attempts += 1;
+          level.progress.completed = level.progress.completed || res.status === "passed";
+          renderProgress();
+        }
+      } catch (err) {
+        $("result").innerHTML = `<div class="summary error">${esc(err.message)}</div>`;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function showVictory(res) {
+      const item = res.new_item;
+      $("modal-body").innerHTML = `
+        <div class="big-icon">${icon(item ? item.icon : "trophy")}</div>
+        <h2 id="modal-title">Hoàn thành màn ${level.id}!</h2>
+        <p>${item ? `Bạn nhận được <b style="color:var(--gold)">${esc(item.name)}</b>.` : "Bạn đã vượt qua màn này một lần nữa."}</p>
+        <p class="muted">Điểm: <b style="color:var(--gold)">${res.score}</b> (cao nhất ${res.best_score})</p>
+        <div class="hrow justify-content-center mt-2">
+          <button class="btn" data-bs-dismiss="modal">Ở lại</button>
+          ${res.next_level ? `<a class="btn primary" href="/play.html?id=${res.next_level}">Màn tiếp theo ${icon("play")}</a>`
+                           : `<a class="btn primary" href="/leaderboard.html">Xem bảng xếp hạng ${icon("trophy")}</a>`}
+        </div>`;
+      bootstrap.Modal.getOrCreateInstance($("modal")).show();
+    }
+
+    // Editor dùng theme dracula (tối) hoặc eclipse (sáng) theo theme của trang.
+    function editorTheme() { return currentTheme() === "light" ? "eclipse" : "dracula"; }
+    window.addEventListener("pq-theme", () => { if (editor) editor.setOption("theme", editorTheme()); });
+
+    $("run-btn").onclick = () => run(false);
+    $("submit-btn").onclick = () => run(true);
+    $("reset-btn").onclick = () => {
+      if (confirm("Xóa code hiện tại và quay về code mẫu?")) editor.setValue(level.starter);
+    };
+
+    (async () => {
+      const me = await PQ.requireUser("map");
+      draftKey = `pq_code_${me.id}_${levelId}`;
+      editor = CodeMirror.fromTextArea($("code"), {
+        mode: "python", theme: editorTheme(), lineNumbers: true, indentUnit: 4, tabSize: 4,
+        matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
+        extraKeys: {
+          Tab: (cm) => cm.somethingSelected() ? cm.indentSelection("add") : cm.replaceSelection("    ", "end"),
+          "Shift-Tab": (cm) => cm.indentSelection("subtract"),
+          "Ctrl-Enter": () => run(false), "Cmd-Enter": () => run(false),
+          "Shift-Ctrl-Enter": () => run(true), "Shift-Cmd-Enter": () => run(true),
+        },
+      });
+      editor.on("change", () => {
+        markErrorLine(null);
+        try { localStorage.setItem(draftKey, editor.getValue()); } catch (_) {}
+      });
+      try {
+        level = await PQ.api("/api/levels/" + levelId);
+      } catch (err) {
+        $("title").textContent = "Không mở được màn này";
+        $("story").textContent = err.message;
+        $("run-btn").disabled = $("submit-btn").disabled = true;
+        return;
+      }
+      let draft = null;
+      try { draft = localStorage.getItem(draftKey); } catch (_) {}
+      editor.setValue(draft || level.saved_code || level.starter);
+      renderMission();
+      previewLevel();
+      PQ.api("/api/events", { method: "POST", body: { type: "open_level", level_id: levelId } }).catch(() => {});
+    })();
+  </script>
+</body>
+</html>

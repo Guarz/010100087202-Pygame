@@ -1,0 +1,289 @@
+/* Theme "phiêu lưu" cho Python Quest, đặt trên nền Bootstrap 5.3.
+   Có 2 bảng màu theo thuộc tính data-bs-theme trên <html>: "dark" (mặc định) và "light".
+   Bootstrap lo lưới responsive, navbar, modal; file này chỉ chỉnh màu sắc và các thành phần riêng của game. */
+:root, [data-bs-theme="dark"] {
+  --bg: #11142a;
+  --bg-2: #171b38;
+  --panel: #1d2246;
+  --panel-2: #252b57;
+  --line: #333a72;
+  --text: #e9ecff;
+  --muted: #9aa3cf;
+  --gold: #ffcc4d;
+  --cyan: #5ed6ff;
+  --green: #58d68d;
+  --red: #ef6363;
+  --purple: #a77bff;
+  --glow-1: #2a2160;
+  --glow-2: #123a5a;
+  --nav-bg: rgba(17, 20, 42, .9);
+  --btn-hover-bg: #2f366a;
+  --btn-hover-border: #4a5299;
+  --placeholder: #6670a3;
+  --feature-bg: rgba(255, 255, 255, .03);
+  --editor-bg: #141832;
+  --console-bg: #0b0e1f;
+  --ok-text: #b6f5cf;
+  --warn-text: #ffe39b;
+  --err-text: #ffbcbc;
+  --radius: 14px;
+  --mono: "JetBrains Mono", Consolas, monospace;
+
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-body-font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  --bs-body-font-size: 15px;
+  --bs-border-color: var(--line);
+  --bs-secondary-color: var(--muted);
+  --bs-link-color: var(--cyan);
+  --bs-link-color-rgb: 94, 214, 255;
+  --bs-link-hover-color: #9be6ff;
+  --bs-link-hover-color-rgb: 155, 230, 255;
+  --bs-code-color: var(--gold);
+  --bs-font-monospace: var(--mono);
+}
+
+[data-bs-theme="light"] {
+  --bg: #f3f5fb;
+  --bg-2: #eef1f9;
+  --panel: #ffffff;
+  --panel-2: #e8ecf7;
+  --line: #d3d9ea;
+  --text: #1c2240;
+  --muted: #5b6488;
+  --gold: #b0700f;
+  --cyan: #0a77a0;
+  --green: #1d9454;
+  --red: #cf3434;
+  --purple: #6941d2;
+  --glow-1: rgba(167, 123, 255, .22);
+  --glow-2: rgba(94, 214, 255, .22);
+  --nav-bg: rgba(255, 255, 255, .88);
+  --btn-hover-bg: #dde3f3;
+  --btn-hover-border: #b9c2de;
+  --placeholder: #9aa2bf;
+  --feature-bg: rgba(255, 255, 255, .7);
+  --editor-bg: #fbfcff;
+  --console-bg: #f1f3fa;
+  --ok-text: #136b3b;
+  --warn-text: #7a5300;
+  --err-text: #a42626;
+
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-border-color: var(--line);
+  --bs-secondary-color: var(--muted);
+  --bs-link-color: var(--cyan);
+  --bs-link-color-rgb: 10, 119, 160;
+  --bs-link-hover-color: #075d7e;
+  --bs-link-hover-color-rgb: 7, 93, 126;
+  --bs-code-color: var(--gold);
+}
+
+html, body {
+  background: radial-gradient(1200px 600px at 10% -10%, var(--glow-1) 0%, transparent 60%),
+              radial-gradient(900px 500px at 110% 10%, var(--glow-2) 0%, transparent 55%), var(--bg);
+  background-attachment: fixed;
+  min-height: 100%;
+}
+body { line-height: 1.55; }
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { line-height: 1.2; font-weight: 700; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.2rem; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); }
+.spacer { flex: 1; }
+/* Hàng ngang nhỏ gọn (không dùng .row vì đó là lưới của Bootstrap). */
+.hrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- navbar ---------- */
+.pq-navbar { background: var(--nav-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.pq-navbar .navbar-brand { font-weight: 800; color: var(--gold); letter-spacing: .5px; }
+.pq-navbar .navbar-brand span { color: var(--cyan); }
+.pq-navbar .nav-link { color: var(--muted); font-weight: 600; border-radius: 8px; padding: 6px 12px !important; }
+.pq-navbar .nav-link:hover, .pq-navbar .nav-link.active { color: var(--text); background: var(--panel); text-decoration: none; }
+.pq-navbar .navbar-toggler { border-color: var(--line); }
+.chip { padding: 3px 10px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.chip.gold { color: var(--gold); }
+.chip.admin { color: var(--purple); }
+
+/* ---------- card ---------- */
+.card {
+  --bs-card-bg: transparent;
+  --bs-card-border-color: var(--line);
+  --bs-card-border-radius: var(--radius);
+  --bs-card-color: var(--text);
+  background: linear-gradient(180deg, var(--panel), var(--bg-2));
+  padding: 20px;
+}
+
+/* ---------- buttons (dùng biến của Bootstrap để hover/disabled đúng) ---------- */
+.btn {
+  --bs-btn-padding-x: 18px; --bs-btn-padding-y: 9px; --bs-btn-font-weight: 700; --bs-btn-border-radius: 10px;
+  --bs-btn-color: var(--text); --bs-btn-bg: var(--panel-2); --bs-btn-border-color: var(--line);
+  --bs-btn-hover-color: var(--text); --bs-btn-hover-bg: var(--btn-hover-bg); --bs-btn-hover-border-color: var(--btn-hover-border);
+  --bs-btn-active-color: var(--text); --bs-btn-active-bg: var(--btn-hover-bg); --bs-btn-active-border-color: var(--btn-hover-border);
+  --bs-btn-disabled-color: var(--text); --bs-btn-disabled-bg: var(--panel-2); --bs-btn-disabled-border-color: var(--line);
+  --bs-btn-focus-shadow-rgb: 94, 214, 255;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:hover { text-decoration: none; filter: brightness(1.08); }
+.btn.primary {
+  --bs-btn-color: #2a1d00; --bs-btn-hover-color: #2a1d00; --bs-btn-active-color: #2a1d00; --bs-btn-disabled-color: #2a1d00;
+  --bs-btn-border-color: #ffd76e; --bs-btn-hover-border-color: #ffe08f; --bs-btn-active-border-color: #ffd76e;
+  background-image: linear-gradient(180deg, #ffd76e, #f0b429);
+}
+.btn.go {
+  --bs-btn-color: #062514; --bs-btn-hover-color: #062514; --bs-btn-active-color: #062514; --bs-btn-disabled-color: #062514;
+  --bs-btn-border-color: #6be3a0; --bs-btn-hover-border-color: #8cefb8; --bs-btn-active-border-color: #6be3a0;
+  background-image: linear-gradient(180deg, #6be3a0, #36b26d);
+}
+.btn.ghost { --bs-btn-bg: transparent; --bs-btn-disabled-bg: transparent; }
+.btn.small { --bs-btn-padding-x: 10px; --bs-btn-padding-y: 5px; --bs-btn-font-size: 13px; --bs-btn-border-radius: 8px; }
+.btn.danger { --bs-btn-color: var(--red); --bs-btn-hover-color: var(--red); }
+
+/* ---------- form ---------- */
+.form-label { font-weight: 600; font-size: 13px; color: var(--muted); }
+.form-control, .form-select {
+  --bs-body-bg: var(--bg);
+  background-color: var(--bg); border-color: var(--line); color: var(--text); border-radius: 10px; padding: 10px 13px;
+}
+.form-select { padding-right: 2.25rem; }
+.form-control:focus, .form-select:focus { background-color: var(--bg); color: var(--text); border-color: var(--cyan); box-shadow: 0 0 0 .2rem rgba(94, 214, 255, .25); }
+.form-control::placeholder { color: var(--placeholder); }
+.form-select-sm { padding: 5px 30px 5px 9px; font-size: 13px; }
+
+.alert { border-radius: 10px; font-size: 14px; padding: 10px 14px; }
+.alert.err { background: rgba(239, 99, 99, .12); border-color: rgba(239, 99, 99, .4); color: var(--err-text); }
+.alert.ok { background: rgba(88, 214, 141, .12); border-color: rgba(88, 214, 141, .4); color: var(--ok-text); }
+
+/* ---------- landing ---------- */
+.hero { min-height: calc(100vh - 140px); }
+.hero h1 { font-size: clamp(32px, 5vw, 46px); font-weight: 800; }
+.hero h1 em { font-style: normal; color: var(--gold); }
+.hero .lead { color: var(--muted); }
+.feature { padding: 12px 14px; border-radius: 12px; background: var(--feature-bg); border: 1px solid var(--line); font-size: 14px; height: 100%; }
+.feature b { display: block; }
+.tabs { display: flex; gap: 4px; margin-bottom: 18px; background: var(--bg); padding: 4px; border-radius: 10px; }
+.tabs button { flex: 1; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 700; }
+.tabs button.active { background: var(--panel-2); color: var(--text); }
+
+/* ---------- map ---------- */
+.avatar { width: 60px; height: 60px; border-radius: 16px; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, var(--purple), var(--cyan)); }
+.stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.stat b { display: block; font-size: 22px; color: var(--gold); }
+.stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.progress { --bs-progress-bg: var(--bg); --bs-progress-height: 8px; --bs-progress-border-radius: 99px; }
+.progress-bar { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+
+.chapter h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.chapter .topic { font-family: var(--mono); font-size: 12px; color: var(--cyan); }
+.levels { display: grid; gap: 10px; margin-top: 12px; }
+.level {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--line); color: var(--text); transition: transform .1s, border-color .15s;
+}
+a.level:hover { border-color: var(--gold); text-decoration: none; transform: translateX(2px); color: var(--text); }
+.level .num { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--panel-2); flex: none; }
+.level.done .num { background: var(--green); color: #062514; }
+.level.locked { opacity: .45; cursor: not-allowed; }
+.level .meta { flex: 1; min-width: 0; }
+.level .meta small { color: var(--muted); }
+.level .score { font-weight: 800; color: var(--gold); }
+
+.slot { aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; background: var(--bg); border: 1px dashed var(--line); }
+.slot.owned { border: 1px solid var(--gold); background: radial-gradient(circle, rgba(255, 204, 77, .15), var(--bg)); }
+
+/* ---------- play ---------- */
+.mission .story { font-style: italic; color: var(--muted); border-left: 3px solid var(--purple); padding-left: 12px; }
+.task { white-space: pre-line; background: var(--bg); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); }
+.section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 18px 0 8px; }
+.api-list { display: grid; gap: 4px; font-size: 13px; }
+.api-list div { display: flex; gap: 10px; }
+.api-list code { min-width: 132px; flex: none; }
+.example { font-family: var(--mono); font-size: 13px; background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--line); word-break: break-word; }
+.example .arrow { color: var(--green); }
+.hint { background: rgba(167, 123, 255, .1); border: 1px solid rgba(167, 123, 255, .35); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; white-space: pre-wrap; font-size: 14px; }
+.hint b { color: var(--purple); }
+
+.game-frame { position: relative; width: 100%; max-width: 820px; aspect-ratio: 16 / 9; margin: 0 auto; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: #141826; }
+.game-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.game-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); background: #141826; pointer-events: none; transition: opacity .4s; text-align: center; padding: 10px; }
+.editor-card { padding: 0; overflow: hidden; }
+.toolbar { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.toolbar .kbd { font-size: 12px; color: var(--muted); }
+.CodeMirror { height: 300px; font-family: var(--mono); font-size: 14px; background: var(--editor-bg) !important; }
+.CodeMirror-gutters { background: var(--editor-bg) !important; border-right: 1px solid var(--line) !important; }
+.cm-error-line { background: rgba(239, 99, 99, .18) !important; }
+
+.result .summary { padding: 12px 14px; border-radius: 10px; font-weight: 600; margin-bottom: 12px; }
+.summary.passed { background: rgba(88, 214, 141, .14); color: var(--ok-text); border: 1px solid rgba(88, 214, 141, .4); }
+.summary.failed { background: rgba(255, 204, 77, .1); color: var(--warn-text); border: 1px solid rgba(255, 204, 77, .35); }
+.summary.error { background: rgba(239, 99, 99, .12); color: var(--err-text); border: 1px solid rgba(239, 99, 99, .4); }
+.tests { display: grid; gap: 8px; }
+.test { padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 14px; }
+.test.pass { border-left: 4px solid var(--green); }
+.test.fail { border-left: 4px solid var(--red); }
+.test .io { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-top: 4px; word-break: break-word; }
+.test .io b { color: var(--text); font-weight: 600; }
+.console { white-space: pre-wrap; font-family: var(--mono); font-size: 13px; background: var(--console-bg); border-radius: 10px; padding: 10px 12px; max-height: 160px; overflow: auto; border: 1px solid var(--line); }
+.badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .5px; }
+.badge.syntax, .badge.forbidden { background: rgba(239, 99, 99, .2); color: var(--red); }
+.badge.runtime, .badge.timeout { background: rgba(255, 150, 80, .2); color: var(--warn-text); }
+.badge.logic { background: rgba(255, 204, 77, .2); color: var(--gold); }
+.badge.ok { background: rgba(88, 214, 141, .2); color: var(--green); }
+
+.modal-content { background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--line); border-radius: var(--radius); }
+.big-icon { font-size: 64px; }
+
+/* ---------- tables ---------- */
+.pq-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pq-table th, .pq-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.pq-table th { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); white-space: nowrap; }
+.pq-table tr.me td { background: rgba(255, 204, 77, .08); }
+.rank { font-weight: 800; width: 52px; }
+.bar { height: 10px; border-radius: 99px; background: var(--bg); overflow: hidden; min-width: 80px; }
+.bar > div { height: 100%; background: var(--cyan); }
+.kpi b { display: block; font-size: 28px; color: var(--gold); }
+.kpi span { color: var(--muted); font-size: 13px; }
+.chart { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 10px; }
+.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.chart-col div { width: 100%; background: linear-gradient(180deg, var(--cyan), var(--purple)); border-radius: 6px 6px 0 0; min-height: 2px; }
+
+.pq-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 10px 18px; border-radius: 10px; z-index: 2000; max-width: calc(100% - 32px); }
+
+/* ---------- icon Font Awesome ---------- */
+.ok-icon { color: var(--green); }
+.fail-icon { color: var(--red); }
+.avatar .fa-solid { color: #fff; font-size: 28px; }
+.slot .fa-solid { font-size: clamp(18px, 4vw, 26px); }
+.slot.owned .fa-solid { color: var(--gold); filter: drop-shadow(0 0 6px rgba(255, 204, 77, .45)); }
+.slot.empty .fa-solid { color: var(--line); font-size: 18px; }
+.big-icon .fa-solid { color: var(--gold); filter: drop-shadow(0 0 14px rgba(255, 204, 77, .5)); }
+.level .meta small .fa-solid { color: var(--cyan); margin-right: 2px; }
+.feature b .fa-solid, .section-title .fa-solid { color: var(--cyan); margin-right: 4px; }
+.rank .fa-medal { font-size: 20px; }
+.rank-1 .fa-medal { color: #ffd76e; } .rank-2 .fa-medal { color: #d6deff; } .rank-3 .fa-medal { color: #f0a36b; }
+
+/* ---------- điện thoại ---------- */
+@media (max-width: 575.98px) {
+  body { font-size: 14px; }
+  .card:not(.editor-card) { padding: 16px; }
+  .CodeMirror { height: 240px; font-size: 13px; }
+  .toolbar .btn:not(.ghost) { flex: 1; --bs-btn-padding-x: 10px; white-space: nowrap; }
+  .toolbar .spacer { display: none; }
+  .stats { width: 100%; justify-content: space-between; }
+  .api-list div { flex-direction: column; gap: 0; margin-bottom: 4px; }
+  .pq-table th, .pq-table td { padding: 8px; }
+}
+
+/* ---------- nút đổi theme ---------- */
+.theme-toggle { --bs-btn-padding-x: 9px; min-width: 36px; }
+[data-bs-theme="light"] .level.done .num { color: #fff; }
+[data-bs-theme="light"] .chart-col div { background: linear-gradient(180deg, #4fc3ec, #8d6cf0); }
+[data-bs-theme="light"] .rank-2 .fa-medal { color: #8a93b8; }
+[data-bs-theme="light"] .pq-navbar .nav-link:hover, [data-bs-theme="light"] .pq-navbar .nav-link.active { background: var(--panel-2); }
+[data-bs-theme="light"] .rank-1 .fa-medal { color: #d29b0c; }

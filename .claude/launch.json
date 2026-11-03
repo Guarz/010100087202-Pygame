@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "python-quest",
+      "runtimeExecutable": "D:\\School\\Python\\Pygame\\run_dev.cmd",
+      "runtimeArgs": [],
+      "port": 8000
+    },
+    {
+      "name": "python-quest-supabase",
+      "runtimeExecutable": "D:\\School\\Python\\Pygame\\run_supabase.cmd",
+      "runtimeArgs": [],
+      "port": 8001
+    }
+  ]
+}

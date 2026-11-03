@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>/* áp theme đã lưu trước khi vẽ trang để không bị chớp màu */try { document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("pq_theme") || "dark"); } catch (e) {}</script>
+  <title>Bảng xếp hạng — Python Quest</title>
+  <link rel="icon" href="/game/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="container py-4" style="max-width:820px">
+    <div class="card">
+      <h2><i class="fa-solid fa-trophy" aria-hidden="true"></i> Bảng xếp hạng</h2>
+      <p class="muted">Tổng điểm cao nhất của mỗi màn (đã trừ điểm gợi ý). Chỉ điểm do server chấm mới được tính.</p>
+      <div class="table-responsive">
+        <table class="pq-table">
+          <thead><tr><th>Hạng</th><th>Người chơi</th><th class="d-none d-sm-table-cell">Màn đã qua</th><th style="text-align:right">Điểm</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="4" class="muted">Đang tải...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (async () => {
+      await PQ.init();
+      let me = null;
+      if (await PQ.token()) me = await PQ.requireUser("leaderboard").catch(() => null);
+      else document.body.insertAdjacentHTML("afterbegin",
+        '<nav class="navbar sticky-top pq-navbar"><div class="container-fluid px-3 px-lg-4"><a class="navbar-brand" href="/">Python<span>Quest</span></a><div class="d-flex align-items-center gap-2">' + themeButtonHtml() + '<a class="btn small primary" href="/index.html">Đăng nhập để chơi</a></div></div></nav>');
+      document.querySelectorAll(".theme-toggle").forEach(paintThemeButton);
+      const rows = await (await fetch("/api/leaderboard")).json();
+      const medal = (rank) => rank <= 3 ? icon("medal") : "#" + rank;
+      document.getElementById("rows").innerHTML = rows.length ? rows.map((r) => `
+        <tr class="${me && r.name === me.display_name && r.score === me.score ? "me" : ""}">
+          <td class="rank rank-${r.rank}">${medal(r.rank)}</td>
+          <td class="text-break"><b>${esc(r.name)}</b></td>
+          <td class="d-none d-sm-table-cell">${r.done}/12</td>
+          <td style="text-align:right;font-weight:800;color:var(--gold)">${r.score}</td>
+        </tr>`).join("") : '<tr><td colspan="4" class="muted">Chưa có ai ghi điểm. Hãy là người đầu tiên!</td></tr>';
+    })();
+  </script>
+</body>
+</html>
