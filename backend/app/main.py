@@ -1,4 +1,5 @@
 """Python Quest — FastAPI backend: API game + phục vụ frontend tĩnh."""
+import os
 import time
 from contextlib import asynccontextmanager
 from collections import Counter, defaultdict
@@ -18,6 +19,8 @@ from .judge import MAX_CODE_LENGTH, judge
 from .levels import CHAPTERS, ITEMS, LEVELS, LEVELS_BY_ID, public_level
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+# Mặc định mở sẵn mọi màn để demo; đặt UNLOCK_ALL_LEVELS=0 để quay lại chế độ qua màn trước mới mở màn sau.
+UNLOCK_ALL_LEVELS = os.environ.get("UNLOCK_ALL_LEVELS", "1").strip().lower() not in ("0", "false", "no", "off")
 
 
 @asynccontextmanager
@@ -85,7 +88,7 @@ def user_progress(conn, user_id):
 
 
 def is_unlocked(level_id, prog, user):
-    if user["role"] == "admin" or level_id == LEVELS[0]["id"]:
+    if UNLOCK_ALL_LEVELS or user["role"] == "admin" or level_id == LEVELS[0]["id"]:
         return True
     prev = prog.get(level_id - 1)
     return bool(prev and prev["completed"])

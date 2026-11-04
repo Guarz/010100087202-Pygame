@@ -8,7 +8,7 @@ os.environ["ADMIN_PASSWORD"] = "admin-test-pass"
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import auth  # noqa: E402
+from app import auth, main  # noqa: E402
 from app.db import engine, metadata  # noqa: E402
 from app.main import _last_judge, app  # noqa: E402
 from tests.test_judge import SOLUTIONS  # noqa: E402
@@ -81,7 +81,14 @@ def test_passwords_are_hashed(client):
     assert not auth.check_password("matkhau2", stored)
 
 
-def test_levels_unlock_in_order_and_hidden_tests_stay_secret(client):
+def test_all_levels_unlocked_by_default(client):
+    levels = client.get("/api/levels", headers=client.player).json()["levels"]
+    assert all(lv["unlocked"] for lv in levels)
+    assert client.get("/api/levels/12", headers=client.player).status_code == 200
+
+
+def test_levels_unlock_in_order_and_hidden_tests_stay_secret(client, monkeypatch):
+    monkeypatch.setattr(main, "UNLOCK_ALL_LEVELS", False)
     levels = client.get("/api/levels", headers=client.player).json()["levels"]
     assert [lv["unlocked"] for lv in levels[:2]] == [True, False]
     assert client.get("/api/levels/2", headers=client.player).status_code == 403

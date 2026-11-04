@@ -83,6 +83,7 @@ khi khởi động và bật Row Level Security, để không ai đọc được
 | `ADMIN_EMAIL` | email dùng để đăng nhập tài khoản admin (biến cũ `ADMIN_USERNAME` vẫn được đọc nếu chưa đổi) |
 | `ADMIN_PASSWORD` | mật khẩu admin — mỗi lần khởi động server sẽ đặt lại theo giá trị này |
 | `SECRET_KEY` | Blueprint tự sinh; nếu tạo Web Service thường thì tự điền một chuỗi ngẫu nhiên dài |
+| `UNLOCK_ALL_LEVELS` | (tùy chọn) mặc định `1`: mở sẵn cả 12 màn để demo. Đặt `0` để phải qua màn trước mới mở màn sau |
 
 Gói free của Render sẽ "ngủ" sau 15 phút không có truy cập, nên lần truy cập đầu tiên sau đó sẽ chậm khoảng 30–60 giây.
 
@@ -95,7 +96,7 @@ Gói free của Render sẽ "ngủ" sau 15 phút không có truy cập, nên l�
 | Test hiện/ẩn, chấm điểm | `judge.py`; điểm = % test đúng − 10 × số gợi ý đã mở |
 | Phân biệt lỗi cú pháp / lỗi chạy / lỗi tư duy | `judge.py` (`SYNTAX_HINTS`, `RUNTIME_HINTS`, có số dòng, tô đỏ dòng lỗi trong editor) |
 | Gợi ý từng bước | 3 gợi ý/màn, mở dần qua `POST /api/levels/{id}/hint` |
-| Hệ thống level, mở khóa tuần tự | `is_unlocked` trong `main.py` |
+| Hệ thống level, mở khóa tuần tự | `is_unlocked` trong `main.py` (bật bằng `UNLOCK_ALL_LEVELS=0`; mặc định mở hết để demo) |
 | Inventory | Mỗi màn thưởng 1 vật phẩm, xem ở `map.html` |
 | Lưu tiến độ | Bảng `pq_progress` (điểm cao nhất, số lần nộp, code gần nhất) |
 | Leaderboard | `leaderboard.html`, `GET /api/leaderboard` |
