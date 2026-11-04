@@ -20,10 +20,10 @@ from .levels import CHAPTERS, ITEMS, LEVELS, LEVELS_BY_ID, public_level
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 
-
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
+    auth.ensure_admin()
     yield
 
 
@@ -34,6 +34,15 @@ app = FastAPI(title="Python Quest API", docs_url="/api/docs", openapi_url="/api/
 
 class CodeIn(BaseModel):
     code: str = Field(max_length=MAX_CODE_LENGTH)
+
+
+class LoginIn(BaseModel):
+    username: str = Field(max_length=40)
+    password: str = Field(max_length=200)
+
+
+class RegisterIn(LoginIn):
+    password_confirm: str = Field(max_length=200)
 
 
 class EventIn(BaseModel):
@@ -109,9 +118,14 @@ def iso(value):
 
 # ------------------------------------------------------------------ public
 
-@app.get("/api/config")
-def config():
-    return {"auth_mode": auth.AUTH_MODE, "supabase_url": auth.SUPABASE_URL, "supabase_anon_key": auth.SUPABASE_ANON_KEY}
+@app.post("/api/auth/register")
+def register(body: RegisterIn):
+    return {"token": auth.register(body.username, body.password, body.password_confirm)}
+
+
+@app.post("/api/auth/login")
+def login(body: LoginIn):
+    return {"token": auth.login(body.username, body.password)}
 
 
 @app.get("/api/health")
@@ -137,7 +151,7 @@ def me(user=Depends(current_user)):
     rows = [r for r in rows if r["score"] > 0]
     rank = next((i + 1 for i, r in enumerate(rows) if r["id"] == user["id"]), None)
     return {
-        "id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"],
+        "id": user["id"], "username": user["username"], "display_name": user["display_name"], "role": user["role"],
         "score": sum(p["best_score"] for p in prog.values()),
         "completed": sum(1 for p in prog.values() if p["completed"]),
         "total_levels": len(LEVELS), "rank": rank,
@@ -266,7 +280,7 @@ def admin_users(_=Depends(admin_user)):
         scores = {r["id"]: r for r in leaderboard_rows(conn)}
         subs = dict(conn.execute(select(submissions.c.user_id, func.count()).group_by(submissions.c.user_id)).all())
     return [{
-        "id": u["id"], "email": u["email"], "display_name": u["display_name"], "role": u["role"],
+        "id": u["id"], "username": u["username"], "display_name": u["display_name"], "role": u["role"],
         "banned": u["banned"], "created_at": iso(u["created_at"]), "last_seen": iso(u["last_seen"]),
         "score": int(scores.get(u["id"], {}).get("score") or 0), "done": int(scores.get(u["id"], {}).get("done") or 0),
         "submissions": subs.get(u["id"], 0),

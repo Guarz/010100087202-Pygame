@@ -7,7 +7,7 @@ from pathlib import Path
 
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
-if _ENV_FILE.exists() and os.environ.get("AUTH_MODE") != "dev":
+if _ENV_FILE.exists():
     for _line in _ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
         _line = _line.strip()
         if _line and not _line.startswith("#") and "=" in _line:

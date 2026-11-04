@@ -3,19 +3,17 @@ services:
     name: python-quest
     runtime: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: AUTH_MODE
-        value: supabase
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
+      - key: SECRET_KEY
+        generateValue: true
       - key: DATABASE_URL
         sync: false
-      - key: ADMIN_EMAILS
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false

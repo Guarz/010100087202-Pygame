@@ -1,80 +1,58 @@
-// Python Quest — module dùng chung cho mọi trang: cấu hình, đăng nhập, gọi API, thanh điều hướng.
-const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+// Python Quest — module dùng chung cho mọi trang: đăng nhập, gọi API, thanh điều hướng.
+const TOKEN_KEY = "pq_token";
 
 const PQ = {
-  config: null,
-  sb: null,
   me: null,
 
-  async init() {
-    if (this.config) return this.config;
-    this.config = await (await fetch("/api/config")).json();
-    if (this.config.auth_mode === "supabase") {
-      await loadScript(SUPABASE_JS);
-      this.sb = window.supabase.createClient(this.config.supabase_url, this.config.supabase_anon_key);
-    }
-    return this.config;
-  },
+  // Giữ để các trang gọi như trước; không còn cấu hình nào cần tải.
+  async init() {},
 
-  async token() {
-    if (this.config.auth_mode === "dev") {
-      const email = localStorage.getItem("pq_dev_email");
-      return email ? "dev:" + email : null;
-    }
-    const { data } = await this.sb.auth.getSession();
-    return data.session ? data.session.access_token : null;
+  token() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
   },
 
   async api(path, { method = "GET", body } = {}) {
     const headers = { "Content-Type": "application/json" };
-    const token = await this.token();
+    const token = this.token();
     if (token) headers.Authorization = "Bearer " + token;
     const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401) {
+    if (res.status === 401 && !path.startsWith("/api/auth/")) {
+      localStorage.removeItem(TOKEN_KEY);
       location.href = "/index.html?next=" + encodeURIComponent(location.pathname + location.search);
       throw new Error(data.detail || "Cần đăng nhập");
     }
-    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Có lỗi xảy ra (" + res.status + ")");
+    if (!res.ok) throw new Error(errorText(data, res.status));
     return data;
   },
 
-  async login(email, password) {
-    if (this.config.auth_mode === "dev") {
-      localStorage.setItem("pq_dev_email", email.trim().toLowerCase());
-      return;
-    }
-    const { error } = await this.sb.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(translateAuthError(error.message));
+  async login(username, password) {
+    const { token } = await this.api("/api/auth/login", { method: "POST", body: { username, password } });
+    localStorage.setItem(TOKEN_KEY, token);
   },
 
-  async register(email, password, displayName) {
-    if (this.config.auth_mode === "dev") return this.login(email);
-    const { data, error } = await this.sb.auth.signUp({
-      email, password,
-      options: { data: { display_name: displayName }, emailRedirectTo: location.origin + "/map.html" },
+  async register(username, password, passwordConfirm) {
+    const { token } = await this.api("/api/auth/register", {
+      method: "POST", body: { username, password, password_confirm: passwordConfirm },
     });
-    if (error) throw new Error(translateAuthError(error.message));
-    return { needsConfirm: !data.session };
+    localStorage.setItem(TOKEN_KEY, token);
   },
 
-  async logout() {
-    if (this.config.auth_mode === "dev") localStorage.removeItem("pq_dev_email");
-    else await this.sb.auth.signOut();
+  logout() {
+    localStorage.removeItem(TOKEN_KEY);
     location.href = "/index.html";
   },
 
   // Gọi ở đầu mỗi trang cần đăng nhập. Trả về hồ sơ người dùng.
   async requireUser(active) {
-    await this.init();
-    if (!(await this.token())) {
+    if (!this.token()) {
       location.href = "/index.html?next=" + encodeURIComponent(location.pathname + location.search);
       return new Promise(() => {});
     }
     try {
       this.me = await this.api("/api/me");
     } catch (err) {
-      document.body.innerHTML = `<div class="container"><div class="alert err">${esc(err.message)}</div>
+      document.body.innerHTML = `<div class="container py-4"><div class="alert err">${esc(err.message)}</div>
         <button class="btn" onclick="PQ.logout()">Đăng xuất</button></div>`;
       throw err;
     }
@@ -83,25 +61,11 @@ const PQ = {
   },
 };
 
-function translateAuthError(msg) {
-  const map = {
-    "Invalid login credentials": "Email hoặc mật khẩu không đúng.",
-    "Email not confirmed": "Email chưa được xác nhận. Hãy mở hộp thư và bấm link xác nhận.",
-    "User already registered": "Email này đã được đăng ký.",
-    "Password should be at least 6 characters": "Mật khẩu phải có ít nhất 6 ký tự.",
-  };
-  for (const key in map) if (msg.includes(key)) return map[key];
-  return msg;
-}
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error("Không tải được " + src));
-    document.head.appendChild(s);
-  });
+// FastAPI trả lỗi dạng {detail: "..."} hoặc {detail: [{msg: ...}]} (lỗi kiểm tra dữ liệu).
+function errorText(data, status) {
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.detail) && data.detail.length) return "Dữ liệu không hợp lệ: " + data.detail[0].msg;
+  return "Có lỗi xảy ra (" + status + ")";
 }
 
 // ---- theme sáng/tối: lưu trong localStorage, áp dụng sớm bằng script nhỏ trong <head> mỗi trang ----

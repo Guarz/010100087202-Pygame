@@ -43,20 +43,21 @@
             <button class="active" data-tab="login">Đăng nhập</button>
             <button data-tab="register">Đăng ký</button>
           </div>
-          <div id="dev-note" class="alert ok hidden">Chế độ phát triển (local): chỉ cần nhập email, không cần mật khẩu.</div>
           <div id="msg"></div>
-          <form id="auth-form" autocomplete="on">
-            <div class="mb-3 hidden" id="name-field">
-              <label class="form-label" for="name">Tên hiển thị</label>
-              <input class="form-control" id="name" maxlength="24" placeholder="VD: Pythonista">
+          <form id="auth-form" autocomplete="on" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="username">Tên đăng nhập</label>
+              <input class="form-control" id="username" required autocomplete="username" autocapitalize="none" spellcheck="false"
+                     minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" placeholder="VD: pythonista_01">
+              <div class="form-text muted hidden" id="username-help">3–20 ký tự: chữ không dấu, số hoặc dấu gạch dưới (_).</div>
             </div>
             <div class="mb-3">
-              <label class="form-label" for="email">Email</label>
-              <input class="form-control" id="email" type="email" required autocomplete="email" placeholder="ban@vidu.com">
-            </div>
-            <div class="mb-3" id="pw-field">
               <label class="form-label" for="password">Mật khẩu</label>
-              <input class="form-control" id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Ít nhất 6 ký tự">
+              <input class="form-control" id="password" type="password" required minlength="6" autocomplete="current-password" placeholder="Ít nhất 6 ký tự">
+            </div>
+            <div class="mb-3 hidden" id="confirm-field">
+              <label class="form-label" for="password-confirm">Xác nhận mật khẩu</label>
+              <input class="form-control" id="password-confirm" type="password" minlength="6" autocomplete="new-password" placeholder="Nhập lại mật khẩu">
             </div>
             <button class="btn primary w-100" id="submit">Vào game <i class="fa-solid fa-play" aria-hidden="true"></i></button>
           </form>
@@ -77,37 +78,40 @@
 
     document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
       mode = b.dataset.tab;
+      const reg = mode === "register";
       document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
-      $("name-field").classList.toggle("hidden", mode !== "register" || PQ.config.auth_mode === "dev");
-      $("password").autocomplete = mode === "register" ? "new-password" : "current-password";
+      $("confirm-field").classList.toggle("hidden", !reg);
+      $("username-help").classList.toggle("hidden", !reg);
+      $("password").autocomplete = reg ? "new-password" : "current-password";
+      $("submit").innerHTML = (reg ? "Tạo tài khoản " : "Vào game ") + icon(reg ? "user-plus" : "play");
       showMsg("");
     });
 
-    (async () => {
-      await PQ.init();
-      if (PQ.config.auth_mode === "dev") {
-        $("dev-note").classList.remove("hidden");
-        $("pw-field").classList.add("hidden");
-      } else {
-        $("password").required = true;
-      }
-      if (await PQ.token()) location.href = target;
-    })();
+    if (PQ.token()) location.href = target;
+
+    function checkForm() {
+      const username = $("username").value.trim();
+      const password = $("password").value;
+      if (!username) return "Hãy nhập tên đăng nhập.";
+      if (mode === "register" && !/^[A-Za-z0-9_]{3,20}$/.test(username))
+        return "Tên đăng nhập gồm 3–20 ký tự: chữ không dấu, số hoặc dấu gạch dưới (_).";
+      if (!password) return "Hãy nhập mật khẩu.";
+      if (mode === "register" && password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự.";
+      if (mode === "register" && password !== $("password-confirm").value) return "Mật khẩu xác nhận không khớp.";
+      return null;
+    }
 
     $("auth-form").onsubmit = async (e) => {
       e.preventDefault();
+      const problem = checkForm();
+      if (problem) return showMsg(problem);
       const btn = $("submit");
       btn.disabled = true;
       showMsg("");
       try {
-        if (mode === "login") {
-          await PQ.login($("email").value, $("password").value);
-          location.href = target;
-        } else {
-          const res = await PQ.register($("email").value, $("password").value, $("name").value.trim());
-          if (res && res.needsConfirm) showMsg("Đăng ký thành công! Hãy mở email và bấm link xác nhận, sau đó đăng nhập.", "ok");
-          else location.href = target;
-        }
+        if (mode === "login") await PQ.login($("username").value.trim(), $("password").value);
+        else await PQ.register($("username").value.trim(), $("password").value, $("password-confirm").value);
+        location.href = target;
       } catch (err) {
         showMsg(err.message);
       } finally {

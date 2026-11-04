@@ -7,11 +7,11 @@ Code được chấm trên server với test hiện và test ẩn. Hệ thống 
 
 ```
 Trình duyệt
-├── Trang web (HTML/JS): đăng nhập Supabase, bản đồ, editor CodeMirror, BXH, admin
+├── Trang web (HTML/JS, Bootstrap 5): đăng nhập, bản đồ, editor CodeMirror, BXH, admin
 │     └── iframe: game Pygame build bằng pygbag (WebAssembly) — vẽ bản đồ, diễn hoạt kết quả
 │           ▲ trang web gửi lệnh cho game qua localStorage ("pq_cmd")
 └── gọi /api/* ─► FastAPI (backend/app)
-                    ├── auth.py    xác minh token Supabase, phân quyền player/admin, khóa tài khoản
+                    ├── auth.py    đăng ký/đăng nhập bằng tên + mật khẩu (PBKDF2), token ký HMAC, phân quyền
                     ├── judge.py   kiểm tra AST + chạy sandbox_runner.py trong tiến trình con có giới hạn
                     ├── levels.py  12 màn, test ẩn chỉ nằm trên server
                     └── db.py      PostgreSQL (Supabase) / SQLite khi chạy local
@@ -34,16 +34,27 @@ Yêu cầu Python 3.11 trở lên.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\pip install -r backend/requirements.txt pygame-ce pygbag pytest
+.venv\Scripts\pip install -r requirements.txt pygame-ce pygbag pytest httpx
 ```
 
 ```powershell
 .\run_dev.cmd
 ```
 
-Trong PowerShell phải có `.\` ở đầu (CMD thì gõ `run_dev.cmd` là được). Muốn chạy local nhưng dùng Supabase thật theo file `.env`, chạy `.\run_supabase.cmd` rồi mở http://localhost:8001.
+Trong PowerShell phải có `.\` ở đầu (CMD thì gõ `run_dev.cmd` là được). Sau đó mở http://localhost:8000 (dùng SQLite trong `backend/`).
+Muốn chạy local nhưng dùng database Supabase theo `DATABASE_URL` trong `.env`, chạy `.\run_supabase.cmd` rồi mở http://localhost:8001.
 
-Sau đó mở http://localhost:8000. Ở chế độ dev, chỉ cần nhập email là đăng nhập được, không cần mật khẩu. Email `admin@local.dev` có quyền admin.
+Người chơi tự đăng ký bằng **tên đăng nhập + mật khẩu + xác nhận mật khẩu**, không cần email.
+Tài khoản admin được tạo sẵn lúc server khởi động từ `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+
+File `.env` ở thư mục gốc (không commit) cho chạy local:
+
+```
+DATABASE_URL=postgresql://...      # chỉ cần khi chạy run_supabase.cmd
+SECRET_KEY=<chuỗi ngẫu nhiên dài>  # khóa ký token đăng nhập
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=<mật khẩu admin>
+```
 
 - Chạy test backend (lời giải mẫu 12 màn, các ca tấn công sandbox, API): `cd backend` rồi `..\.venv\Scripts\python -m pytest -q tests`
 - Chạy thử game trên desktop: `.venv\Scripts\python game\main.py` (bấm phím 1–4 để đổi cảnh demo)
@@ -53,14 +64,12 @@ Lần đầu mở một màn chơi, game có thể mất 10–20 giây để t�
 
 ## Deploy (Supabase + Render)
 
-### 1. Supabase
+### 1. Supabase (chỉ dùng làm database PostgreSQL)
 1. Tạo project mới.
-2. Vào **Project Settings → API** và chép **Project URL** cùng khóa **anon / publishable**.
-3. Bấm **Connect**, chọn **Session pooler** (hỗ trợ IPv4, Render cần cái này) và chép connection string. Thay `[YOUR-PASSWORD]` bằng mật khẩu database.
-4. Vào **Authentication → URL Configuration**, đặt **Site URL** là URL Render (ví dụ `https://python-quest.onrender.com`), rồi thêm URL đó vào Redirect URLs.
-5. (Tùy chọn) Vào **Authentication → Providers → Email** để bật hoặc tắt "Confirm email".
+2. Bấm **Connect**, chọn **Session pooler** (hỗ trợ IPv4, Render cần cái này) và chép connection string. Thay `[YOUR-PASSWORD]` bằng mật khẩu database.
 
-Không cần tạo bảng bằng tay. Backend tự tạo các bảng `pq_*` khi khởi động và tự bật Row Level Security, để anon key công khai không đọc được dữ liệu qua Data API.
+Không dùng Supabase Auth nên không cần cấu hình email. Không cần tạo bảng bằng tay: backend tự tạo các bảng `pq_*`
+khi khởi động và bật Row Level Security, để không ai đọc được dữ liệu qua Data API công khai của Supabase.
 
 ### 2. Render
 1. Push repo lên GitHub.
@@ -69,12 +78,12 @@ Không cần tạo bảng bằng tay. Backend tự tạo các bảng `pq_*` khi 
 
 | Biến | Giá trị |
 |---|---|
-| `SUPABASE_URL` | Project URL |
-| `SUPABASE_ANON_KEY` | khóa anon / publishable |
 | `DATABASE_URL` | connection string Session pooler |
-| `ADMIN_EMAILS` | email của bạn (cách nhau bằng dấu phẩy); tài khoản này tự thành admin khi đăng nhập |
+| `ADMIN_USERNAME` | tên đăng nhập của admin (3–20 ký tự a-z, 0-9, _) |
+| `ADMIN_PASSWORD` | mật khẩu admin — mỗi lần khởi động server sẽ đặt lại theo giá trị này |
+| `SECRET_KEY` | Blueprint tự sinh; nếu tạo Web Service thường thì tự điền một chuỗi ngẫu nhiên dài |
 
-Không bao giờ đặt `AUTH_MODE=dev` trên server thật. Gói free của Render sẽ "ngủ" sau 15 phút không có truy cập, nên lần truy cập đầu tiên sau đó sẽ chậm khoảng 30–60 giây.
+Gói free của Render sẽ "ngủ" sau 15 phút không có truy cập, nên lần truy cập đầu tiên sau đó sẽ chậm khoảng 30–60 giây.
 
 ## Tính năng theo yêu cầu đề bài
 
@@ -89,6 +98,6 @@ Không bao giờ đặt `AUTH_MODE=dev` trên server thật. Gói free của Ren
 | Inventory | Mỗi màn thưởng 1 vật phẩm, xem ở `map.html` |
 | Lưu tiến độ | Bảng `pq_progress` (điểm cao nhất, số lần nộp, code gần nhất) |
 | Leaderboard | `leaderboard.html`, `GET /api/leaderboard` |
-| Đăng nhập & phân quyền, quản lý user | Supabase Auth; `admin.html`: đổi vai trò, khóa tài khoản |
+| Đăng nhập & phân quyền, quản lý user | `auth.py` (tên đăng nhập + mật khẩu băm PBKDF2, chặn đoán mật khẩu); `admin.html`: đổi tên, vai trò, khóa tài khoản |
 | Analytics | Bảng `pq_events` + `pq_submissions`; admin xem tỉ lệ đạt từng màn, loại lỗi, người chơi theo ngày |
 | Tài liệu API | `/api/docs` (Swagger) |
