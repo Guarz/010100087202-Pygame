@@ -1,2 +1,0 @@
-# Render (và pip) mặc định tìm requirements.txt ở thư mục gốc; danh sách thật nằm trong backend/.
--r backend/requirements.txt
