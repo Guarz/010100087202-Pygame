@@ -46,6 +46,14 @@ def test_requires_login(client):
     assert client.get("/api/me", headers=bearer(forged)).status_code == 401
 
 
+def test_static_files_are_revalidated(client):
+    # Tránh trình duyệt giữ app.js cũ sau khi deploy bản mới.
+    for path in ("/index.html", "/js/app.js", "/css/style.css"):
+        res = client.get(path)
+        assert res.status_code == 200 and res.headers["cache-control"] == "no-cache", path
+        assert client.get(path, headers={"If-None-Match": res.headers["etag"]}).status_code == 304
+
+
 def test_register_validation(client):
     def reg(username, password="matkhau1", confirm="matkhau1"):
         return client.post("/api/auth/register", json={"username": username, "password": password, "password_confirm": confirm})

@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -28,6 +28,15 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="Python Quest API", docs_url="/api/docs", openapi_url="/api/openapi.json", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_stale_cache(request: Request, call_next):
+    # File tĩnh không có Cache-Control thì trình duyệt tự cache theo Last-Modified và có thể dùng app.js cũ
+    # với HTML mới sau khi deploy. "no-cache" bắt trình duyệt hỏi lại server (rẻ: 304 nếu file chưa đổi).
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-cache")
+    return response
 
 
 # ------------------------------------------------------------------ helpers
