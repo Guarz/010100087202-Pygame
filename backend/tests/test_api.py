@@ -2,7 +2,7 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_api.db"
 os.environ["SECRET_KEY"] = "test-secret"
-os.environ["ADMIN_USERNAME"] = "thaygiao"
+os.environ["ADMIN_EMAIL"] = "thaygiao@truong.edu.vn"
 os.environ["ADMIN_PASSWORD"] = "admin-test-pass"
 
 import pytest  # noqa: E402
@@ -24,10 +24,10 @@ def client():
     metadata.create_all(engine)
     auth._failures.clear()
     with TestClient(app) as c:
-        reg = c.post("/api/auth/register", json={"username": "HocSinh", "password": "matkhau1", "password_confirm": "matkhau1"})
+        reg = c.post("/api/auth/register", json={"email": "HocSinh@Test.vn", "password": "matkhau1", "password_confirm": "matkhau1"})
         assert reg.status_code == 200, reg.text
         c.player = bearer(reg.json()["token"])
-        login = c.post("/api/auth/login", json={"username": "thaygiao", "password": "admin-test-pass"})
+        login = c.post("/api/auth/login", json={"email": "thaygiao@truong.edu.vn", "password": "admin-test-pass"})
         assert login.status_code == 200, login.text
         c.admin = bearer(login.json()["token"])
         yield c
@@ -55,28 +55,28 @@ def test_static_files_are_revalidated(client):
 
 
 def test_register_validation(client):
-    def reg(username, password="matkhau1", confirm="matkhau1"):
-        return client.post("/api/auth/register", json={"username": username, "password": password, "password_confirm": confirm})
+    def reg(email, password="matkhau1", confirm="matkhau1"):
+        return client.post("/api/auth/register", json={"email": email, "password": password, "password_confirm": confirm})
 
-    assert reg("hocsinh").status_code == 409  # trùng tên (không phân biệt hoa thường)
-    assert reg("ab").status_code == 422
-    assert reg("có dấu").status_code == 422
-    assert reg("ban_moi", confirm="khac123").json()["detail"] == "Mật khẩu xác nhận không khớp."
-    assert reg("ban_moi", password="123", confirm="123").status_code == 422
-    assert reg("ban_moi").status_code == 200
+    assert reg("hocsinh@test.vn").json()["detail"] == "Email này đã được đăng ký."  # không phân biệt hoa thường
+    assert reg("khong-phai-email").status_code == 422
+    assert reg("thieu@tenmien").status_code == 422
+    assert reg("ban@moi.vn", confirm="khac123").json()["detail"] == "Mật khẩu xác nhận không khớp."
+    assert reg("ban@moi.vn", password="123", confirm="123").status_code == 422
+    assert reg("ban@moi.vn").status_code == 200
 
 
 def test_login_checks_password_and_limits_guessing(client):
     me = client.get("/api/me", headers=client.player).json()
-    assert me["username"] == "hocsinh" and me["display_name"] == "hocsinh" and me["role"] == "player"
+    assert me["email"] == "hocsinh@test.vn" and me["display_name"] == "hocsinh" and me["role"] == "player"
     for _ in range(auth.MAX_FAILURES):
-        assert client.post("/api/auth/login", json={"username": "hocsinh", "password": "sai"}).status_code == 401
-    assert client.post("/api/auth/login", json={"username": "hocsinh", "password": "matkhau1"}).status_code == 429
+        assert client.post("/api/auth/login", json={"email": "hocsinh@test.vn", "password": "sai"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "hocsinh@test.vn", "password": "matkhau1"}).status_code == 429
 
 
 def test_passwords_are_hashed(client):
     with engine.connect() as conn:
-        stored = conn.exec_driver_sql("SELECT password_hash FROM pq_profiles WHERE username = 'hocsinh'").scalar()
+        stored = conn.exec_driver_sql("SELECT password_hash FROM pq_profiles WHERE email = 'hocsinh@test.vn'").scalar()
     assert "matkhau1" not in stored and auth.check_password("matkhau1", stored)
     assert not auth.check_password("matkhau2", stored)
 
@@ -114,14 +114,14 @@ def test_run_only_uses_visible_tests(client):
 def test_admin_only_endpoints(client):
     assert client.get("/api/admin/users", headers=client.player).status_code == 403
     users = client.get("/api/admin/users", headers=client.admin).json()
-    player = next(u for u in users if u["username"] == "hocsinh")
+    player = next(u for u in users if u["email"] == "hocsinh@test.vn")
     assert client.patch(f"/api/admin/users/{player['id']}", json={"banned": True}, headers=client.admin).status_code == 200
     assert client.get("/api/me", headers=client.player).status_code == 403
-    assert client.post("/api/auth/login", json={"username": "hocsinh", "password": "matkhau1"}).status_code == 403
+    assert client.post("/api/auth/login", json={"email": "hocsinh@test.vn", "password": "matkhau1"}).status_code == 403
     res = client.patch(f"/api/admin/users/{player['id']}", json={"display_name": "  Học   Sinh  "}, headers=client.admin)
     assert res.json()["display_name"] == "Học Sinh"
     assert client.patch("/api/me", json={"display_name": "Hack"}, headers=client.player).status_code == 405
-    admin_id = next(u["id"] for u in users if u["username"] == "thaygiao")
+    admin_id = next(u["id"] for u in users if u["email"] == "thaygiao@truong.edu.vn")
     assert client.patch(f"/api/admin/users/{admin_id}", json={"display_name": "Thầy Giáo"}, headers=client.admin).status_code == 200
     assert client.patch(f"/api/admin/users/{admin_id}", json={"role": "player"}, headers=client.admin).status_code == 400
     stats = client.get("/api/admin/stats", headers=client.admin).json()
@@ -130,7 +130,19 @@ def test_admin_only_endpoints(client):
 
 def test_admin_account_is_restored_from_env(client):
     with engine.begin() as conn:
-        conn.exec_driver_sql("UPDATE pq_profiles SET role = 'player', banned = 1 WHERE username = 'thaygiao'")
+        conn.exec_driver_sql("UPDATE pq_profiles SET role = 'player', banned = 1 WHERE email = 'thaygiao@truong.edu.vn'")
     auth.ensure_admin()
     me = client.get("/api/me", headers=client.admin).json()
     assert me["role"] == "admin"
+
+
+def test_old_username_schema_is_renamed_and_accounts_keep_working(client):
+    from app.db import init_db
+    # Giả lập DB của bản trước: cột username, tài khoản "anh" tạo bằng tên chứ không phải email.
+    with engine.begin() as conn:
+        conn.exec_driver_sql("ALTER TABLE pq_profiles RENAME COLUMN email TO username")
+        conn.exec_driver_sql("UPDATE pq_profiles SET username = 'anh' WHERE username = 'hocsinh@test.vn'")
+    init_db()
+    res = client.post("/api/auth/login", json={"email": "anh", "password": "matkhau1"})
+    assert res.status_code == 200
+    assert client.get("/api/me", headers=bearer(res.json()["token"])).json()["email"] == "anh"

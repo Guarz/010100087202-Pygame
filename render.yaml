@@ -3,7 +3,7 @@ services:
     name: python-quest
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
@@ -13,7 +13,7 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
-      - key: ADMIN_USERNAME
+      - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false

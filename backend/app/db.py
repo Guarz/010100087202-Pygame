@@ -9,7 +9,7 @@ metadata = MetaData()
 profiles = Table(
     "pq_profiles", metadata,
     Column("id", String(64), primary_key=True),  # uuid hex do backend sinh
-    Column("username", String(20), nullable=False, unique=True),  # chữ thường a-z, 0-9, _
+    Column("email", String(254), nullable=False, unique=True),  # chữ thường; chỉ dùng để đăng nhập, không gửi mail
     Column("password_hash", String(200), nullable=False),
     Column("display_name", String(40), nullable=False),
     Column("role", String(10), nullable=False, default="player"),  # player | admin
@@ -79,13 +79,18 @@ engine = create_engine(
 )
 
 
+def _profile_columns():
+    if "pq_profiles" not in inspect(engine).get_table_names():
+        return None
+    return {c["name"] for c in inspect(engine).get_columns("pq_profiles")}
+
+
 def _drop_legacy_tables():
-    """Bản đầu tiên đăng nhập bằng email (Supabase Auth). Nếu gặp bảng kiểu cũ mà còn trống thì xóa để tạo lại."""
+    """Bản đầu tiên dùng Supabase Auth (không có mật khẩu trong bảng). Nếu gặp bảng kiểu đó mà còn trống thì xóa để tạo lại."""
+    columns = _profile_columns()
+    if columns is None or "password_hash" in columns:
+        return
     existing = set(inspect(engine).get_table_names())
-    if "pq_profiles" not in existing:
-        return
-    if "username" in {c["name"] for c in inspect(engine).get_columns("pq_profiles")}:
-        return
     ours = [t for t in metadata.sorted_tables if t.name in existing]
     with engine.begin() as conn:
         if any(conn.execute(text(f'SELECT 1 FROM "{t.name}" LIMIT 1')).first() for t in ours):
@@ -94,8 +99,20 @@ def _drop_legacy_tables():
             conn.execute(text(f'DROP TABLE "{table.name}"'))
 
 
+def _rename_username_to_email():
+    """Bản thứ hai đăng nhập bằng tên (cột username). Đổi tên cột thành email, giữ nguyên tài khoản cũ."""
+    columns = _profile_columns()
+    if columns is None or "username" not in columns or "email" in columns:
+        return
+    with engine.begin() as conn:
+        conn.execute(text('ALTER TABLE "pq_profiles" RENAME COLUMN "username" TO "email"'))
+        if engine.dialect.name == "postgresql":
+            conn.execute(text('ALTER TABLE "pq_profiles" ALTER COLUMN "email" TYPE VARCHAR(254)'))
+
+
 def init_db():
     _drop_legacy_tables()
+    _rename_username_to_email()
     metadata.create_all(engine)
     if engine.dialect.name == "postgresql":
         # Supabase mở schema public qua Data API cho mọi người có anon key.

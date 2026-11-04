@@ -26,14 +26,14 @@ const PQ = {
     return data;
   },
 
-  async login(username, password) {
-    const { token } = await this.api("/api/auth/login", { method: "POST", body: { username, password } });
+  async login(email, password) {
+    const { token } = await this.api("/api/auth/login", { method: "POST", body: { email, password } });
     localStorage.setItem(TOKEN_KEY, token);
   },
 
-  async register(username, password, passwordConfirm) {
+  async register(email, password, passwordConfirm) {
     const { token } = await this.api("/api/auth/register", {
-      method: "POST", body: { username, password, password_confirm: passwordConfirm },
+      method: "POST", body: { email, password, password_confirm: passwordConfirm },
     });
     localStorage.setItem(TOKEN_KEY, token);
   },

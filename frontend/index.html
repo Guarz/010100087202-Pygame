@@ -46,10 +46,10 @@
           <div id="msg"></div>
           <form id="auth-form" autocomplete="on" novalidate>
             <div class="mb-3">
-              <label class="form-label" for="username">Tên đăng nhập</label>
-              <input class="form-control" id="username" required autocomplete="username" autocapitalize="none" spellcheck="false"
-                     minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" placeholder="VD: pythonista_01">
-              <div class="form-text muted hidden" id="username-help">3–20 ký tự: chữ không dấu, số hoặc dấu gạch dưới (_).</div>
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control" id="email" type="email" required autocomplete="email" autocapitalize="none" spellcheck="false"
+                     maxlength="254" placeholder="ban@vidu.com">
+              <div class="form-text muted hidden" id="email-help">Email chỉ dùng để đăng nhập, hệ thống không gửi thư xác nhận.</div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="password">Mật khẩu</label>
@@ -81,7 +81,7 @@
       const reg = mode === "register";
       document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
       $("confirm-field").classList.toggle("hidden", !reg);
-      $("username-help").classList.toggle("hidden", !reg);
+      $("email-help").classList.toggle("hidden", !reg);
       $("password").autocomplete = reg ? "new-password" : "current-password";
       $("submit").innerHTML = (reg ? "Tạo tài khoản " : "Vào game ") + icon(reg ? "user-plus" : "play");
       showMsg("");
@@ -90,11 +90,10 @@
     if (PQ.token()) location.href = target;
 
     function checkForm() {
-      const username = $("username").value.trim();
+      const email = $("email").value.trim();
       const password = $("password").value;
-      if (!username) return "Hãy nhập tên đăng nhập.";
-      if (mode === "register" && !/^[A-Za-z0-9_]{3,20}$/.test(username))
-        return "Tên đăng nhập gồm 3–20 ký tự: chữ không dấu, số hoặc dấu gạch dưới (_).";
+      if (!email) return "Hãy nhập email.";
+      if (mode === "register" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Email không hợp lệ.";
       if (!password) return "Hãy nhập mật khẩu.";
       if (mode === "register" && password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự.";
       if (mode === "register" && password !== $("password-confirm").value) return "Mật khẩu xác nhận không khớp.";
@@ -109,8 +108,8 @@
       btn.disabled = true;
       showMsg("");
       try {
-        if (mode === "login") await PQ.login($("username").value.trim(), $("password").value);
-        else await PQ.register($("username").value.trim(), $("password").value, $("password-confirm").value);
+        if (mode === "login") await PQ.login($("email").value.trim(), $("password").value);
+        else await PQ.register($("email").value.trim(), $("password").value, $("password-confirm").value);
         location.href = target;
       } catch (err) {
         showMsg(err.message);

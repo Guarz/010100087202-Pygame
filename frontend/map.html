@@ -18,7 +18,7 @@
         <div class="avatar"><i class="fa-solid fa-robot" aria-hidden="true"></i></div>
         <div class="flex-grow-1" style="min-width:200px">
           <h2 id="name" class="mb-0 text-break"></h2>
-          <div class="muted text-break" id="username"></div>
+          <div class="muted text-break" id="email"></div>
           <div class="progress mt-2" role="progressbar" aria-label="Tiến độ hoàn thành">
             <div class="progress-bar" id="bar" style="width:0"></div>
           </div>
@@ -53,7 +53,7 @@
       const me = await PQ.requireUser("map");
       const $ = (id) => document.getElementById(id);
       $("name").textContent = me.display_name;
-      $("username").textContent = "@" + me.username;
+      $("email").textContent = me.email;
       $("s-score").textContent = me.score;
       $("s-done").textContent = `${me.completed}/${me.total_levels}`;
       $("s-rank").textContent = me.rank ? "#" + me.rank : "—";

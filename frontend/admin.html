@@ -39,7 +39,7 @@
     <section class="card">
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
         <h3 class="mb-0 me-auto">Quản lý người dùng</h3>
-        <input class="form-control" id="search" placeholder="Tìm theo tên hiển thị hoặc tên đăng nhập..." style="max-width:280px">
+        <input class="form-control" id="search" placeholder="Tìm theo tên hoặc email..." style="max-width:280px">
       </div>
       <div class="table-responsive"><table class="pq-table">
         <thead><tr><th>Người dùng</th><th>Điểm</th><th>Màn qua</th><th>Lượt nộp</th><th>Hoạt động gần nhất</th><th>Vai trò</th><th>Trạng thái</th></tr></thead>
@@ -63,13 +63,13 @@
 
     function renderUsers() {
       const q = $("search").value.trim().toLowerCase();
-      const list = users.filter((u) => !q || u.display_name.toLowerCase().includes(q) || u.username.includes(q));
+      const list = users.filter((u) => !q || u.display_name.toLowerCase().includes(q) || u.email.includes(q));
       $("users").innerHTML = list.map((u) => {
         const self = u.id === me.id;
         return `<tr>
           <td><div class="hrow flex-nowrap" style="gap:6px"><b>${esc(u.display_name)}</b>
             <button class="btn small ghost" data-id="${esc(u.id)}" data-field="display_name" title="Đổi tên hiển thị">${icon("pen")}</button></div>
-            <div class="muted" style="font-size:12px">@${esc(u.username)}</div></td>
+            <div class="muted" style="font-size:12px">${esc(u.email)}</div></td>
           <td style="color:var(--gold);font-weight:700">${u.score}</td>
           <td>${u.done}/12</td>
           <td>${u.submissions}</td>
@@ -99,7 +99,7 @@
       const rename = e.target.closest("button[data-field=display_name]");
       if (rename) {
         const u = users.find((x) => x.id === rename.dataset.id);
-        const name = prompt(`Tên hiển thị mới cho @${u.username} (2–24 ký tự):`, u.display_name);
+        const name = prompt(`Tên hiển thị mới cho ${u.email} (2–24 ký tự):`, u.display_name);
         if (name && name.trim() !== u.display_name) {
           PQ.api("/api/admin/users/" + encodeURIComponent(u.id), { method: "PATCH", body: { display_name: name } })
             .then((res) => { u.display_name = res.display_name; toast("Đã đổi tên."); renderUsers(); })

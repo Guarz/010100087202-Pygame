@@ -11,7 +11,7 @@ Trình duyệt
 │     └── iframe: game Pygame build bằng pygbag (WebAssembly) — vẽ bản đồ, diễn hoạt kết quả
 │           ▲ trang web gửi lệnh cho game qua localStorage ("pq_cmd")
 └── gọi /api/* ─► FastAPI (backend/app)
-                    ├── auth.py    đăng ký/đăng nhập bằng tên + mật khẩu (PBKDF2), token ký HMAC, phân quyền
+                    ├── auth.py    đăng ký/đăng nhập bằng email + mật khẩu (PBKDF2), token ký HMAC, phân quyền
                     ├── judge.py   kiểm tra AST + chạy sandbox_runner.py trong tiến trình con có giới hạn
                     ├── levels.py  12 màn, test ẩn chỉ nằm trên server
                     └── db.py      PostgreSQL (Supabase) / SQLite khi chạy local
@@ -34,7 +34,7 @@ Yêu cầu Python 3.11 trở lên.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt pygame-ce pygbag pytest httpx
+.venv\Scripts\pip install -r backend/requirements.txt pygame-ce pygbag pytest httpx
 ```
 
 ```powershell
@@ -44,15 +44,16 @@ python -m venv .venv
 Trong PowerShell phải có `.\` ở đầu (CMD thì gõ `run_dev.cmd` là được). Sau đó mở http://localhost:8000 (dùng SQLite trong `backend/`).
 Muốn chạy local nhưng dùng database Supabase theo `DATABASE_URL` trong `.env`, chạy `.\run_supabase.cmd` rồi mở http://localhost:8001.
 
-Người chơi tự đăng ký bằng **tên đăng nhập + mật khẩu + xác nhận mật khẩu**, không cần email.
-Tài khoản admin được tạo sẵn lúc server khởi động từ `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+Người chơi tự đăng ký bằng **email + mật khẩu + xác nhận mật khẩu**. Email chỉ được lưu để đăng nhập:
+hệ thống **không gửi thư xác nhận**, nên không cần SMTP và không gặp lỗi "email rate limit exceeded" của Supabase Auth.
+Tài khoản admin được tạo sẵn lúc server khởi động từ `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 File `.env` ở thư mục gốc (không commit) cho chạy local:
 
 ```
 DATABASE_URL=postgresql://...      # chỉ cần khi chạy run_supabase.cmd
 SECRET_KEY=<chuỗi ngẫu nhiên dài>  # khóa ký token đăng nhập
-ADMIN_USERNAME=admin
+ADMIN_EMAIL=ban@vidu.com
 ADMIN_PASSWORD=<mật khẩu admin>
 ```
 
@@ -79,7 +80,7 @@ khi khởi động và bật Row Level Security, để không ai đọc được
 | Biến | Giá trị |
 |---|---|
 | `DATABASE_URL` | connection string Session pooler |
-| `ADMIN_USERNAME` | tên đăng nhập của admin (3–20 ký tự a-z, 0-9, _) |
+| `ADMIN_EMAIL` | email dùng để đăng nhập tài khoản admin (biến cũ `ADMIN_USERNAME` vẫn được đọc nếu chưa đổi) |
 | `ADMIN_PASSWORD` | mật khẩu admin — mỗi lần khởi động server sẽ đặt lại theo giá trị này |
 | `SECRET_KEY` | Blueprint tự sinh; nếu tạo Web Service thường thì tự điền một chuỗi ngẫu nhiên dài |
 
@@ -98,6 +99,6 @@ Gói free của Render sẽ "ngủ" sau 15 phút không có truy cập, nên l�
 | Inventory | Mỗi màn thưởng 1 vật phẩm, xem ở `map.html` |
 | Lưu tiến độ | Bảng `pq_progress` (điểm cao nhất, số lần nộp, code gần nhất) |
 | Leaderboard | `leaderboard.html`, `GET /api/leaderboard` |
-| Đăng nhập & phân quyền, quản lý user | `auth.py` (tên đăng nhập + mật khẩu băm PBKDF2, chặn đoán mật khẩu); `admin.html`: đổi tên, vai trò, khóa tài khoản |
+| Đăng nhập & phân quyền, quản lý user | `auth.py` (email + mật khẩu băm PBKDF2, không gửi mail xác nhận, chặn đoán mật khẩu); `admin.html`: đổi tên, vai trò, khóa tài khoản |
 | Analytics | Bảng `pq_events` + `pq_submissions`; admin xem tỉ lệ đạt từng màn, loại lỗi, người chơi theo ngày |
 | Tài liệu API | `/api/docs` (Swagger) |
